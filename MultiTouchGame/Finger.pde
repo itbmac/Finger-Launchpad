@@ -13,13 +13,14 @@ class Finger
   public float minorAxisLastTouched;
   public int milliLastTouched;
   public int milliFirstTouched;
-  
+
+  int maxOpacity = 100;
   int wallDelayMax = 30;
   int wallDelay;
   float innerPolygonCoef[];
   float outerPolygonCoef[];
   int maxIterations;
-  
+ 
   public static final float fingerScale = 0.007;
   public static final float arrowDistScale = 7;
 
@@ -38,6 +39,12 @@ class Finger
     this.minorAxis = 0.0;
     dirX = 1;
     dirY = 1;
+    
+    if (ColorMultiplyMode) {
+      maxOpacity = opacityMul;
+      colorLocMul = colorLocMul;
+      colorOpp = colorOppMul;
+    }
   }
 
   public void update(float posX, float posY, float velX, float velY, 
@@ -53,24 +60,24 @@ class Finger
     this.majorAxis = majorAxis;
     this.minorAxis = minorAxis;
     this.milliLastTouched = time;
-    
+
     if (this.majorAxis < this.majorAxisLastTouched/2)
       this.majorAxis = this.majorAxisLastTouched;
-      
+
     if (this.minorAxis < this.minorAxisLastTouched/2)
       this.minorAxis = this.minorAxisLastTouched;
   }
-  
+
   public void advance()
   {
     float speed = .01;
-    speed = majorAxis/minorAxis * .0065; // The more elongated, the faster the speed
+    speed = majorAxis/minorAxis * SpeedOfBlob; // The more elongated, the faster the speed
     if (wallDelay > 0)
       wallDelay--;
-    
+
     if (DebugMode)
       println(speed);
-    
+
     if (playerId == 0) {
       this.pos.x += 1 * speed * cos(radians(-angle));
       this.pos.y -= 1 * speed * sin(radians(-angle));
@@ -85,7 +92,8 @@ class Finger
   {
     float absX = pos.x * width;
     float absY = height - (pos.y * height);
-    
+    float opac = map(percToFire, 0, 100, 0, maxOpacity);
+
     pushMatrix();
 
     translate(absX, absY);
@@ -98,23 +106,41 @@ class Finger
 
     // draw the fingerprint
     noStroke();
-    
-    if (playerId == 0) {
-      stroke(colorLoc, percToFire);
-      fill(151, 49, 103, 0);
+
+    if (StrokeMode) {
+      if (playerId == 0) {
+        stroke(colorLoc, opac);
+        fill(colorLoc, 0);
+      }
+      else if (playerId == 1) {
+        stroke(colorOpp, opac);
+        fill(colorOpp, 0);
+      }
     }
-    else if (playerId == 1) {
-      stroke(colorOpp, percToFire);
-      fill(26, 75, 98, 0);
+    else {
+      if (playerId == 0) {
+        stroke(colorLoc, 0);
+        fill(colorLoc, opac);
+      }
+      else if (playerId == 1) {
+        stroke(colorOpp, 0);
+        fill(colorOpp, opac);
+      }
     }
-    
+
+
     if (percToFire < 99)
-      strokeWeight(2);
+      strokeWeight(strokeLoading);
     else 
-      strokeWeight(4);
-    
+      strokeWeight(strokeFired);
+      
     ellipse(0.0, 0.0, majorAxis * fingerScale * width, minorAxis * fingerScale * width);
     
+    if (!StrokeMode) {
+      stroke(colorBac);
+      fill(colorBac);
+    }
+
     if (percToFire < 100) {
       float arrowDist = majorAxis * fingerScale * width * 0.4;
       line(0.0, 0.0, arrowDist - arrowDistScale, 0.0);
@@ -130,39 +156,39 @@ class Finger
 
     popMatrix();
   }
-  
+
   public float getAbsX() {
     return pos.x * width;
   }
-  
+
   public float getAbsY() {
     return height - (pos.y * height);
   }
-  
+
   public float getMajorAxis() {
     return this.majorAxis * this.fingerScale * width * .5;
   }
-  
+
   public float getMinorAxis() {
     return this.minorAxis * this.fingerScale * width * .5;
   }
-  
+
   public float getArea() {
     return PI * this.getMajorAxis() * this.getMinorAxis();
   }
-  
+
   public void shrinkArea(float oMinorAxis, float oMajorAxis) {
     if (this.majorAxis - oMajorAxis < 3)
       this.majorAxis = 3;
     else
       this.majorAxis -= oMajorAxis;
-    
+
     if (this.minorAxis - oMinorAxis < 3)
       this.minorAxis = 3;
     else
       this.minorAxis -= oMinorAxis;
   }
-  
+
   public void switchXDirection() {
     if (wallDelay > 0)
       return;

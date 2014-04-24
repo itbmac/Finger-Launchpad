@@ -22,17 +22,31 @@ HashMap<Integer, Finger> firedFingerMapLoc;
 HashMap<Integer, Finger> firedFingerMapOpp;
 
 public color colorLoc = #c89b87;
+public color colorLocMul = #cf7070;
 public color colorOpp = #7d70cf;
+public color colorOppMul = #e8e780;
 public color colorBac = #1d1d1d;
 public color colorAcc = #131311;
 public int opacityBac = 70;
+public int opacityMul = 65;
 public int healthBarYOffset = 4;
+public int strokeFired = 4;
+public int strokeLoading = 2;
 
+public boolean NoDamageMode = false;
+public boolean FriendlyFireMode = false;
+public boolean AutoFireMode = false;
+public boolean StrokeMode = true;
+public boolean ColorMultiplyMode = false;
+public boolean MirrorMode = true;
+public float MirrorModeOffset = 0.1;
 public boolean DebugMode = false;
 public boolean GameRecentlyOver = false;
 public int GameOverWinner;
 public int GameOverLength = 5;
 public int GameOverTimer;
+
+public float SpeedOfBlob = 0.004; //0.0065;
 
 // the port that we will be listening for osc signals over
 int listenPort = 9109;
@@ -70,16 +84,16 @@ void resetGame() {
   // initialize the data structures to keep track of fingers
   candidateFingerMapLoc = new HashMap<Integer, Finger>();
   candidateFingerMapOpp = new HashMap<Integer, Finger>();
-  
+
   firedFingerMapLoc = new HashMap<Integer, Finger>();
   firedFingerMapOpp = new HashMap<Integer, Finger>();
-  
+
   fingersToAddLoc = new ArrayList();
   fingersToAddOpp = new ArrayList();
-  
+
   fingersToRemoveLoc = new ArrayList();
   fingersToRemoveOpp = new ArrayList();
-  
+
   fingersToFireLoc = new ArrayList();
   fingersToFireOpp = new ArrayList();
 
@@ -96,7 +110,6 @@ void draw() {
     GameRecentlyOver = true;
     GameOverWinner = 1;
     GameOverTimer = GameOverLength;
-    
   }
   else if (playerHealthOpp <= 0) {
     playerScoreLoc++;
@@ -105,10 +118,10 @@ void draw() {
     GameOverWinner = 0;
     GameOverTimer = GameOverLength;
   }
-  
+
   if (GameRecentlyOver) {
     GameOverTimer--;
-    
+
     if (GameOverTimer <= 0)
       GameRecentlyOver = false;
   }
@@ -122,7 +135,7 @@ void draw() {
   }
   else
     fill(colorBac, opacityBac);
-  rect(0,0, width, height);
+  rect(0.0, 0.0, width, height);
 
   stroke(colorAcc, opacityBac);
   fill(colorAcc, opacityBac);
@@ -133,7 +146,7 @@ void draw() {
   fill(colorOpp);
   //strokeWeight(4);
   //rect(0.0, 0.0, (float)width, playerHealthHeightLoc);
-  
+
   strokeWeight(3);
   int numLines = (playerHealthOpp/(playerHealthMax/10)) + 1;
   float residual = (playerHealthOpp - numLines * (playerHealthMax/10.0));
@@ -143,15 +156,15 @@ void draw() {
   fill(colorOpp, residual * 10);
   line(0.0, healthBarYOffset + (numLines - 1) * 7, (float) width, healthBarYOffset + (numLines - 1) * 7);
   playerHealthHeightOpp = 3 + healthBarYOffset + (numLines - 1) * 7;
-  
+
   //println("Health: " + playerHealthOpp + " ;;; Num Lines: " + numLines + " ;;; Resid: " + residual);
   //println("health line: " + playerHealthHeightOpp);
-  
+
   stroke(colorLoc);
   fill(colorLoc);
   //strokeWeight(4);
   //rect(0.0, height - playerHealthHeightOpp, (float)width, playerHealthHeightOpp);
-  
+
   strokeWeight(3);
   numLines = (playerHealthLoc/(playerHealthMax/10)) + 1;
   residual = (playerHealthLoc - numLines * (playerHealthMax/10.0));
@@ -159,9 +172,9 @@ void draw() {
     line(0.0, height - healthBarYOffset - i * 7, (float) width, height - healthBarYOffset - i * 7);
   stroke(colorLoc, residual * 10);
   fill(colorLoc, residual * 10);
-  line(0.0, height - healthBarYOffset - (numLines - 1) * 7, (float) width,height - healthBarYOffset - (numLines - 1) * 7);
+  line(0.0, height - healthBarYOffset - (numLines - 1) * 7, (float) width, height - healthBarYOffset - (numLines - 1) * 7);
   playerHealthHeightLoc = 3 + healthBarYOffset + (numLines - 1) * 7;
-  
+
   if (DebugMode) {
     color(0.8);
     text("Fingers0: " + candidateFingerMapLoc.size(), 10, 20);
@@ -174,7 +187,7 @@ void draw() {
 
 
   int curTime = millis();
-  
+
   // ========================================================
   // ========================================================
   // ========================================================
@@ -186,9 +199,9 @@ void draw() {
     candidateFingerMapLoc.put(fingerToAdd.id, fingerToAdd);
   }
   fingersToAddLoc.clear();
-  
+
   // ========================================================
-  
+
   // add any new fingers we got from the OSC messages
   for (int i = 0; i < fingersToAddOpp.size(); i++)
   {
@@ -196,7 +209,7 @@ void draw() {
     candidateFingerMapOpp.put(fingerToAdd.id, fingerToAdd);
   }
   fingersToAddOpp.clear();
-  
+
   // ========================================================
   // ========================================================
   // ========================================================
@@ -206,35 +219,64 @@ void draw() {
   {
     Finger finger = (Finger)me.getValue();
 
-    // if we haven't heard from this finger in a while,
-    // it must have been lifted, so remove it
-    if (curTime - finger.milliLastTouched > timeToRemove)
-    {
-      fingersToRemoveLoc.add(finger.id);
-    }
-    
-    if (curTime - finger.milliFirstTouched > timeToFire)
-    {
-      int fingerId = - 1;
-      Finger fingerF;
-
-      do {
-        fingerId++;
-        fingerF = (Finger)firedFingerMapLoc.get(fingerId);
+    if (AutoFireMode) {
+      // if we haven't heard from this finger in a while,
+      // it must have been lifted, so remove it
+      if (curTime - finger.milliLastTouched > timeToRemove)
+      {
+        fingersToRemoveLoc.add(finger.id);
       }
-      while (fingerF != null);
 
-      finger.idFired = fingerId;
-      fingersToFireLoc.add(fingerId);
-      firedFingerMapLoc.put(fingerId, finger);
-      
-      if (DebugMode) {
-        println("LFIRE: " + fingerId);
-        println("LAREA: " + finger.getArea());
+      if (curTime - finger.milliFirstTouched > timeToFire)
+      {
+        int fingerId = - 1;
+        Finger fingerF;
+
+        do {
+          fingerId++;
+          fingerF = (Finger)firedFingerMapLoc.get(fingerId);
+        }
+        while (fingerF != null);
+
+        finger.idFired = fingerId;
+        fingersToFireLoc.add(fingerId);
+        firedFingerMapLoc.put(fingerId, finger);
+
+        if (DebugMode) {
+          println("LFIRE: " + fingerId);
+          println("LAREA: " + finger.getArea());
+        }
+        fingersToRemoveLoc.add(finger.id);
       }
-      fingersToRemoveLoc.add(finger.id);
     }
-    
+    else {
+      if (curTime - finger.milliLastTouched > timeToRemove)
+      {
+
+        if (curTime - finger.milliFirstTouched > timeToFire)
+        {
+          int fingerId = - 1;
+          Finger fingerF;
+
+          do {
+            fingerId++;
+            fingerF = (Finger)firedFingerMapLoc.get(fingerId);
+          }
+          while (fingerF != null);
+
+          finger.idFired = fingerId;
+          fingersToFireLoc.add(fingerId);
+          firedFingerMapLoc.put(fingerId, finger);
+
+          if (DebugMode) {
+            println("LFIRE: " + fingerId);
+            println("LAREA: " + finger.getArea());
+          }
+        }
+        fingersToRemoveLoc.add(finger.id);
+      }
+    }
+
     if (curTime - finger.milliFirstTouched > 900)
       finger.render((float)width, (float)height, 99);
     else {
@@ -242,41 +284,70 @@ void draw() {
       finger.render((float)width, (float)height, percFired);
     }
   }
-  
+
   // ========================================================
-  
+
   // iterate through existing fingers and render them
   for (Map.Entry me : candidateFingerMapOpp.entrySet())
   {
     Finger finger = (Finger)me.getValue();
 
-    // if we haven't heard from this finger in a while,
-    // it must have been lifted, so remove it
-    if (curTime - finger.milliLastTouched > timeToRemove)
-    {
-      fingersToRemoveOpp.add(finger.id);
+    if (AutoFireMode) {
+      // if we haven't heard from this finger in a while,
+      // it must have been lifted, so remove it
+      if (curTime - finger.milliLastTouched > timeToRemove)
+      {
+        fingersToRemoveOpp.add(finger.id);
+      }
+
+      if (curTime - finger.milliFirstTouched > timeToFire)
+      {
+        int fingerId = - 1;
+        Finger fingerF;
+
+        do {
+          fingerId++;
+          fingerF = (Finger)firedFingerMapOpp.get(fingerId);
+        }
+        while (fingerF != null);
+
+        finger.idFired = fingerId;
+        fingersToFireOpp.add(fingerId);
+        firedFingerMapOpp.put(fingerId, finger);
+
+        if (DebugMode) {
+          println("FIRE: " + fingerId);
+          println("AREA: " + finger.getArea());
+        }
+        fingersToRemoveOpp.add(finger.id);
+      }
     }
-    
-    if (curTime - finger.milliFirstTouched > timeToFire)
-    {
-      int fingerId = - 1;
-      Finger fingerF;
+    else {
+      if (curTime - finger.milliLastTouched > timeToRemove)
+      {
 
-      do {
-        fingerId++;
-        fingerF = (Finger)firedFingerMapOpp.get(fingerId);
-      }
-      while (fingerF != null);
+        if (curTime - finger.milliFirstTouched > timeToFire)
+        {
+          int fingerId = - 1;
+          Finger fingerF;
 
-      finger.idFired = fingerId;
-      fingersToFireOpp.add(fingerId);
-      firedFingerMapOpp.put(fingerId, finger);
-      
-      if (DebugMode) {
-        println("FIRE: " + fingerId);
-        println("AREA: " + finger.getArea());
+          do {
+            fingerId++;
+            fingerF = (Finger)firedFingerMapOpp.get(fingerId);
+          }
+          while (fingerF != null);
+
+          finger.idFired = fingerId;
+          fingersToFireOpp.add(fingerId);
+          firedFingerMapOpp.put(fingerId, finger);
+
+          if (DebugMode) {
+            println("FIRE: " + fingerId);
+            println("AREA: " + finger.getArea());
+          }
+        }
+        fingersToRemoveOpp.add(finger.id);
       }
-      fingersToRemoveOpp.add(finger.id);
     }
 
     if (curTime - finger.milliFirstTouched > 900)
@@ -286,7 +357,7 @@ void draw() {
       finger.render((float)width, (float)height, percFired);
     }
   }
-  
+
   // ========================================================
   // ========================================================
   // ========================================================
@@ -298,9 +369,9 @@ void draw() {
     candidateFingerMapLoc.remove(idToRemove);
   }
   fingersToRemoveLoc.clear();
-  
+
   // ========================================================
-  
+
   // remove all the fingers that were lifted
   for (int j = 0; j < fingersToRemoveOpp.size(); j++)
   {
@@ -319,17 +390,16 @@ void draw() {
   for (Map.Entry me1 : firedFingerMapLoc.entrySet())
   {
     Finger finger1 = (Finger)me1.getValue();
-    firedFingerMapNew.remove(finger1.idFired);
 
-     if ((finger1.getAbsX() - finger1.getMajorAxis())  < 0)
-        finger1.switchXDirection();
-     else if (((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) > width) 
-         || ((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()) > width)) {
-        finger1.switchXDirection();
+    if ((finger1.getAbsX() - finger1.getMajorAxis())  < 0)
+      finger1.switchXDirection();
+    else if (((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) > width) 
+      || ((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()) > width)) {
+      finger1.switchXDirection();
     }
-    
+
     //if ((finger1.getAbsY() - 8 - sin(radians(finger1.angle)) * finger1.getMinorAxis())  < playerHealthHeightOpp)  {
-      if ((finger1.getAbsY() - 8 - sin(radians(finger1.angle)) * finger1.getMajorAxis())  < playerHealthHeightOpp)  {
+    if ((finger1.getAbsY() - (strokeFired * 2) - sin(radians(finger1.angle)) * finger1.getMajorAxis())  < playerHealthHeightOpp) {
       if (finger1.playerId == 0) {
         //println("abs y: " + finger1.getAbsY() + " ;;; calc y: " + (finger1.getAbsY() - 8 - sin(radians(finger1.angle)) * finger1.getMinorAxis()));
         //println("health line: " + playerHealthHeightOpp);
@@ -339,29 +409,31 @@ void draw() {
       else 
         finger1.switchYDirection();
     }
-    else if ((finger1.getAbsY() - finger1.getMinorAxis()) > height - playerHealthHeightLoc)  {
-        finger1.switchYDirection();
+    else if ((finger1.getAbsY() - finger1.getMinorAxis()) > height - playerHealthHeightLoc) {
+      finger1.switchYDirection();
     }
 
-    for (Map.Entry me2 : firedFingerMapNew.entrySet())
-    {
-      Finger finger2 = (Finger)me2.getValue();
+    if (!NoDamageMode) {
+      for (Map.Entry me2 : firedFingerMapNew.entrySet())
+      {
+        Finger finger2 = (Finger)me2.getValue();
 
-      if ((finger1 != finger2) && (finger1.playerId != finger2.playerId)) {
-        // draw an arrow for its direction
-        if (collide(finger1.getAbsX(), finger1.getAbsY(), finger1.getMajorAxis() + 8, finger1.getMinorAxis() + 8, 
-        finger2.getAbsX(), finger2.getAbsY(), finger2.getMajorAxis(), finger2.getMinorAxis())) {
-          if (finger1.getArea() == finger2.getArea()) {
-            fingersToRemoveLoc.add(finger1.idFired);
-            fingersToRemoveOpp.add(finger2.idFired);
-          }
-          else if (finger1.getArea() > finger2.getArea()) {
-            fingersToRemoveOpp.add(finger2.idFired);
-            finger1.shrinkArea(finger2.minorAxis, finger2.majorAxis);
-          }
-          else {
-            fingersToRemoveLoc.add(finger1.idFired);
-            finger2.shrinkArea(finger1.minorAxis, finger1.majorAxis);
+        if (finger1 != finger2) {
+          // draw an arrow for its direction
+          if (collide(finger1.getAbsX(), finger1.getAbsY(), finger1.getMajorAxis() + (strokeFired * 0), finger1.getMinorAxis() + (strokeFired * 0), 
+          finger2.getAbsX(), finger2.getAbsY(), finger2.getMajorAxis() + (strokeFired * 0), finger2.getMinorAxis() + (strokeFired * 0))) {
+            if (finger1.getArea() == finger2.getArea()) {
+              fingersToRemoveLoc.add(finger1.idFired);
+              fingersToRemoveOpp.add(finger2.idFired);
+            }
+            else if (finger1.getArea() > finger2.getArea()) {
+              fingersToRemoveOpp.add(finger2.idFired);
+              finger1.shrinkArea(finger2.minorAxis, finger2.majorAxis);
+            }
+            else {
+              fingersToRemoveLoc.add(finger1.idFired);
+              finger2.shrinkArea(finger1.minorAxis, finger1.majorAxis);
+            }
           }
         }
       }
@@ -369,57 +441,153 @@ void draw() {
 
     finger1.advance();
     finger1.render((float)width, (float)height, 100.0);
-    
+
     if (DebugMode) {
       strokeWeight(4);
       stroke(255);
       point((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMinorAxis()), finger1.getAbsY());
-      stroke(255,0,0);
+      stroke(255, 0, 0);
       point((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()), finger1.getAbsY());
-      
+
       strokeWeight(4);
       stroke(255);
       point(finger1.getAbsX(), (finger1.getAbsY() - finger1.getMinorAxis()));
     }
   }
-  
+
   // ========================================================
-  
+
   firedFingerMapNew = (HashMap<Integer, Finger>)firedFingerMapLoc.clone();
 
   // iterate through fired fingers and render them
   for (Map.Entry me1 : firedFingerMapOpp.entrySet())
   {
     Finger finger1 = (Finger)me1.getValue();
-    firedFingerMapNew.remove(finger1.idFired);
 
     if ((finger1.getAbsX() - finger1.getMajorAxis())  < 0)
-        finger1.switchXDirection();
-     else if (((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) > width) 
-         || ((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()) > width)) 
-        finger1.switchXDirection();
-    
+      finger1.switchXDirection();
+    else if (((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) > width) 
+      || ((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()) > width)) 
+      finger1.switchXDirection();
 
-    if ((finger1.getAbsY() + 8 + sin(radians(finger1.angle)) * finger1.getMinorAxis()) > height - playerHealthHeightLoc)  {
-        playerHealthLoc -= finger1.getArea() * 0.003;
-        fingersToRemoveOpp.add(finger1.idFired);
+
+    if ((finger1.getAbsY() + 8 + sin(radians(finger1.angle)) * finger1.getMinorAxis()) > height - playerHealthHeightLoc) {
+      playerHealthLoc -= finger1.getArea() * 0.003;
+      fingersToRemoveOpp.add(finger1.idFired);
     }
-    else if ((finger1.getAbsY() - finger1.getMinorAxis()) < playerHealthHeightOpp)  {
-        finger1.switchYDirection();
+    else if ((finger1.getAbsY() - finger1.getMinorAxis()) < playerHealthHeightOpp) {
+      finger1.switchYDirection();
+    }
+
+    if (!NoDamageMode) {
+      for (Map.Entry me2 : firedFingerMapNew.entrySet())
+      {
+        Finger finger2 = (Finger)me2.getValue();
+
+        if (finger1 != finger2) {
+          // draw an arrow for its direction
+          if (collide(finger1.getAbsX(), finger1.getAbsY(), finger1.getMajorAxis() + (strokeFired * 2), finger1.getMinorAxis() + (strokeFired * 2), 
+          finger2.getAbsX(), finger2.getAbsY(), finger2.getMajorAxis() + (strokeFired * 2), finger2.getMinorAxis() + (strokeFired * 2))) {
+            if (finger1.getArea() == finger2.getArea()) {
+              fingersToRemoveOpp.add(finger1.idFired);
+              fingersToRemoveLoc.add(finger2.idFired);
+            }
+            else if (finger1.getArea() > finger2.getArea()) {
+              fingersToRemoveLoc.add(finger2.idFired);
+              finger1.shrinkArea(finger2.minorAxis, finger2.majorAxis);
+            }
+            else {
+              fingersToRemoveOpp.add(finger1.idFired);
+              finger2.shrinkArea(finger1.minorAxis, finger1.majorAxis);
+            }
+          }
+        }
+      }
     }
 
     finger1.advance();
     finger1.render((float)width, (float)height, 100.0);
-    
+
     if (DebugMode) {
       strokeWeight(4);
       stroke(255);
       point((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMinorAxis()), finger1.getAbsY());
-      stroke(255,0,0);
+      stroke(255, 0, 0);
       point((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()), finger1.getAbsY());
     }
   }
-  
+
+  // ========================================================
+
+  if (FriendlyFireMode && !NoDamageMode) {
+
+    firedFingerMapNew = (HashMap<Integer, Finger>)firedFingerMapLoc.clone();
+
+    // iterate through fired fingers and render them
+    for (Map.Entry me1 : firedFingerMapLoc.entrySet())
+    {
+      Finger finger1 = (Finger)me1.getValue();
+      firedFingerMapNew.remove(finger1.idFired);
+
+      for (Map.Entry me2 : firedFingerMapNew.entrySet())
+      {
+        Finger finger2 = (Finger)me2.getValue();
+
+        if (finger1 != finger2) {
+          // draw an arrow for its direction
+          if (collide(finger1.getAbsX(), finger1.getAbsY(), finger1.getMajorAxis() + (strokeFired * 2), finger1.getMinorAxis() + (strokeFired * 2), 
+          finger2.getAbsX(), finger2.getAbsY(), finger2.getMajorAxis() + (strokeFired * 2), finger2.getMinorAxis() + (strokeFired * 2))) {
+            if (finger1.getArea() == finger2.getArea()) {
+              fingersToRemoveLoc.add(finger1.idFired);
+              fingersToRemoveLoc.add(finger2.idFired);
+            }
+            else if (finger1.getArea() > finger2.getArea()) {
+              fingersToRemoveLoc.add(finger2.idFired);
+              finger1.shrinkArea(finger2.minorAxis, finger2.majorAxis);
+            }
+            else {
+              fingersToRemoveLoc.add(finger1.idFired);
+              finger2.shrinkArea(finger1.minorAxis, finger1.majorAxis);
+            }
+          }
+        }
+      }
+    }
+
+    firedFingerMapNew = (HashMap<Integer, Finger>)firedFingerMapOpp.clone();
+
+    // iterate through fired fingers and render them
+    for (Map.Entry me1 : firedFingerMapOpp.entrySet())
+    {
+      Finger finger1 = (Finger)me1.getValue();
+      firedFingerMapNew.remove(finger1.idFired);
+
+      for (Map.Entry me2 : firedFingerMapNew.entrySet())
+      {
+        Finger finger2 = (Finger)me2.getValue();
+
+        if (finger1 != finger2) {
+          // draw an arrow for its direction
+          if (collide(finger1.getAbsX(), finger1.getAbsY(), finger1.getMajorAxis() + (strokeFired * 2), finger1.getMinorAxis() + (strokeFired * 2), 
+          finger2.getAbsX(), finger2.getAbsY(), finger2.getMajorAxis() + (strokeFired * 2), finger2.getMinorAxis() + (strokeFired * 2))) {
+            if (finger1.getArea() == finger2.getArea()) {
+              fingersToRemoveOpp.add(finger1.idFired);
+              fingersToRemoveOpp.add(finger2.idFired);
+            }
+            else if (finger1.getArea() > finger2.getArea()) {
+              fingersToRemoveOpp.add(finger2.idFired);
+              finger1.shrinkArea(finger2.minorAxis, finger2.majorAxis);
+            }
+            else {
+              fingersToRemoveOpp.add(finger1.idFired);
+              finger2.shrinkArea(finger1.minorAxis, finger1.majorAxis);
+            }
+          }
+        }
+      }
+    }
+  }
+
   // ========================================================
   // ========================================================
   // ========================================================
@@ -431,9 +599,9 @@ void draw() {
     firedFingerMapLoc.remove(idToRemove);
   }
   fingersToRemoveLoc.clear();
-  
+
   // ========================================================
-  
+
   // remove all the fingers that were lifted
   for (int j = 0; j < fingersToRemoveOpp.size(); j++)
   {
@@ -441,29 +609,29 @@ void draw() {
     firedFingerMapOpp.remove(idToRemove);
   }
   fingersToRemoveOpp.clear();
-  
+
   /*
   strokeWeight(0);
-  stroke(255);
-  fill(255);
-  
-  float x1 = 100.0, y1 = 100.0, w1 = 100.0, h1 = 200.0;
-  float x2 = 192.0, y2 = 243.0, w2 = 200.0, h2 = 150.0;
-  
-  if (collide(x1, y1, w1/2, h1/2, x2, y2, w2/2, h2/2)) {
-    stroke(255,0,0);
-    fill(255,0,0);
-  }
-  
-  ellipse(x1, y1, w1, h1);
-  ellipse(x2, y2, w2, h2);
-  */
+   stroke(255);
+   fill(255);
+   
+   float x1 = 100.0, y1 = 100.0, w1 = 100.0, h1 = 200.0;
+   float x2 = 192.0, y2 = 243.0, w2 = 200.0, h2 = 150.0;
+   
+   if (collide(x1, y1, w1/2, h1/2, x2, y2, w2/2, h2/2)) {
+   stroke(255,0,0);
+   fill(255,0,0);
+   }
+   
+   ellipse(x1, y1, w1, h1);
+   ellipse(x2, y2, w2, h2);
+   */
 }
 
 
 // incoming osc message are forwarded to the oscEvent method.
 void oscEvent(OscMessage oscMsg) {
-  
+
   //println(oscMsg.toString());
 
   String addr = oscMsg.addrPattern();
@@ -477,8 +645,9 @@ void oscEvent(OscMessage oscMsg) {
   Integer fingerId = oscMsg.get(0).intValue();
   float posX = oscMsg.get(1).floatValue();
   float posY = oscMsg.get(2).floatValue();
+  float posY2 = oscMsg.get(2).floatValue();
   Integer playerId = 0;
-  
+
   if (!oscMsg.toString().substring(0, 10).equals("/127.0.0.1"))
     playerId = 1;
 
@@ -495,8 +664,18 @@ void oscEvent(OscMessage oscMsg) {
 
     if (height - (posY * height) > height - 95.0)
       posY = 95.0/height;
-    
+
     posY = (Math.abs(height - (posY * height)))/height;
+  }
+
+  if (MirrorMode) {
+    if (height - (posY2 * height) < height/2)
+      posY2 = 0.5;
+
+    if (height - (posY2 * height) > height - 95.0)
+      posY2 = 95.0/height;
+
+    posY2 = (Math.abs(height - (posY2 * height)))/height;
   }
 
   float velX = 0.0;
@@ -520,17 +699,22 @@ void oscEvent(OscMessage oscMsg) {
     state = oscMsg.get(9).intValue();
     size = oscMsg.get(10).floatValue();
   }
-  
+
   if (DebugMode)
     println("CirclePerc: " + majorAxis/minorAxis);
 
-  Finger finger = null;
- 
+  Finger finger = null, finger2 = null;
+
   if (playerId == 0)
     finger  = (Finger)candidateFingerMapLoc.get(fingerId);
   else if (playerId == 1)
     finger  = (Finger)candidateFingerMapOpp.get(fingerId);
-    
+
+  if (MirrorMode) {
+    finger2  = (Finger)candidateFingerMapOpp.get(fingerId);
+  }
+
+
   // finger doesn't exist yet, so create it
   if (finger == null)
   {
@@ -539,8 +723,15 @@ void oscEvent(OscMessage oscMsg) {
       fingersToAddLoc.add(finger);
     else if (playerId == 1)
       fingersToAddOpp.add(finger);
+
+    if (MirrorMode) {
+      finger2 = new Finger(fingerId, time, 1);
+      fingersToAddOpp.add(finger2);
+    }
   }
   finger.update(posX, posY, velX, velY, angle, majorAxis, minorAxis, time);
+  if (MirrorMode) 
+    finger2.update(posX+MirrorModeOffset, posY2, velX, velY, angle, majorAxis, minorAxis, time);
 }
 
 
