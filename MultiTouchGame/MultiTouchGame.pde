@@ -321,9 +321,11 @@ void draw() {
     Finger finger1 = (Finger)me1.getValue();
     firedFingerMapNew.remove(finger1.idFired);
 
-     if (((finger1.getAbsX() - finger1.getMajorAxis())  < 0) || ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) > width) 
-     || ((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()) > width)) {
-      finger1.switchXDirection();
+     if ((finger1.getAbsX() - finger1.getMajorAxis())  < 0)
+        finger1.switchXDirection();
+     else if (((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) > width) 
+         || ((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()) > width)) {
+        finger1.switchXDirection();
     }
     
     //if ((finger1.getAbsY() - 8 - sin(radians(finger1.angle)) * finger1.getMinorAxis())  < playerHealthHeightOpp)  {
@@ -391,10 +393,11 @@ void draw() {
     Finger finger1 = (Finger)me1.getValue();
     firedFingerMapNew.remove(finger1.idFired);
 
-    if (((finger1.getAbsX() - finger1.getMajorAxis())  < 0) || ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) > width) 
-     || ((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()) > width)) {
-      finger1.switchXDirection();
-    }
+    if ((finger1.getAbsX() - finger1.getMajorAxis())  < 0)
+        finger1.switchXDirection();
+     else if (((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) > width) 
+         || ((finger1.getAbsX() + cos(radians(finger1.angle + 180)) * finger1.getMajorAxis()) > width)) 
+        finger1.switchXDirection();
     
 
     if ((finger1.getAbsY() + 8 + sin(radians(finger1.angle)) * finger1.getMinorAxis()) > height - playerHealthHeightLoc)  {

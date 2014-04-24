@@ -13,7 +13,9 @@ class Finger
   public float minorAxisLastTouched;
   public int milliLastTouched;
   public int milliFirstTouched;
-
+  
+  int wallDelayMax = 30;
+  int wallDelay;
   float innerPolygonCoef[];
   float outerPolygonCoef[];
   int maxIterations;
@@ -63,18 +65,19 @@ class Finger
   {
     float speed = .01;
     speed = majorAxis/minorAxis * .0065; // The more elongated, the faster the speed
-    
+    if (wallDelay > 0)
+      wallDelay--;
     
     if (DebugMode)
       println(speed);
     
     if (playerId == 0) {
-      this.pos.x += dirX * speed * cos(radians(-angle));
-      this.pos.y -= dirY * speed * sin(radians(-angle));
+      this.pos.x += 1 * speed * cos(radians(-angle));
+      this.pos.y -= 1 * speed * sin(radians(-angle));
     }
     else if (playerId == 1) {
-      this.pos.x += dirX * speed * cos(radians(angle));
-      this.pos.y -= dirY * speed * sin(radians(angle));
+      this.pos.x += 1 * speed * cos(radians(angle));
+      this.pos.y -= 1 * speed * sin(radians(angle));
     }
   }
 
@@ -161,10 +164,16 @@ class Finger
   }
   
   public void switchXDirection() {
-    dirX *= -1;
+    if (wallDelay > 0)
+      return;
+    wallDelay = wallDelayMax;
+    angle = 180-angle;
   }
   public void switchYDirection() {
-    dirY *= -1;
+    if (wallDelay > 0)
+      return;
+    wallDelay = wallDelayMax;
+    angle = 180-angle;
   }
 }
 
