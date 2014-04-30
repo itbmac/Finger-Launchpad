@@ -5,6 +5,7 @@ class Finger
   public int playerId;
   public int dirX = 1, dirY = 1;
   public PVector pos;
+  public PVector offset;
   public PVector vel;
   public float angle;
   public float majorAxis;
@@ -20,7 +21,7 @@ class Finger
   float innerPolygonCoef[];
   float outerPolygonCoef[];
   int maxIterations;
- 
+
   public static final float fingerScale = 0.007;
   public static final float arrowDistScale = 7;
 
@@ -33,13 +34,14 @@ class Finger
     this.milliFirstTouched = time;
 
     this.pos = new PVector(0.5, 0.5);
+    this.offset = new PVector(random(-1.0 * MirrorModeOffsetX, MirrorModeOffsetX), random(-1.0 * MirrorModeOffsetY, MirrorModeOffsetY));
     this.vel = new PVector(0.5, 0.5);
     this.angle = 0.0;
     this.majorAxis = 0.0;
     this.minorAxis = 0.0;
     dirX = 1;
     dirY = 1;
-    
+
     if (ColorMultiplyMode) {
       maxOpacity = opacityMul;
       colorLocMul = colorLocMul;
@@ -66,6 +68,14 @@ class Finger
 
     if (this.minorAxis < this.minorAxisLastTouched/2)
       this.minorAxis = this.minorAxisLastTouched;
+
+    if (MirrorMode && (playerId == 1)) {
+      this.pos.x = posX + this.offset.x;
+      this.pos.y = posY + this.offset.y; 
+        
+      constrain(this.pos.y, 5.0/height, 0.5);
+      constrain(this.pos.x, 0, width-(this.minorAxis/2));
+    }
   }
 
   public void advance()
@@ -107,7 +117,7 @@ class Finger
     // draw the fingerprint
     noStroke();
 
-    if (StrokeMode) {
+    if ((StrokeMode) || (percToFire < 99)) {
       if (playerId == 0) {
         stroke(colorLoc, opac);
         fill(colorLoc, 0);
@@ -133,10 +143,10 @@ class Finger
       strokeWeight(strokeLoading);
     else 
       strokeWeight(strokeFired);
-      
+
     ellipse(0.0, 0.0, majorAxis * fingerScale * width, minorAxis * fingerScale * width);
-    
-    if (!StrokeMode) {
+
+    if ((!StrokeMode) && (percToFire >= 99)) {
       stroke(colorBac);
       fill(colorBac);
     }

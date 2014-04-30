@@ -36,10 +36,11 @@ public int strokeLoading = 2;
 public boolean NoDamageMode = false;
 public boolean FriendlyFireMode = false;
 public boolean AutoFireMode = false;
-public boolean StrokeMode = true;
+public boolean StrokeMode = false;
 public boolean ColorMultiplyMode = false;
 public boolean MirrorMode = true;
-public float MirrorModeOffset = 0.1;
+public float MirrorModeOffsetX = 0.25;
+public float MirrorModeOffsetY = 0.1;
 public boolean DebugMode = false;
 public boolean GameRecentlyOver = false;
 public int GameOverWinner;
@@ -731,7 +732,7 @@ void oscEvent(OscMessage oscMsg) {
   }
   finger.update(posX, posY, velX, velY, angle, majorAxis, minorAxis, time);
   if (MirrorMode) 
-    finger2.update(posX+MirrorModeOffset, posY2, velX, velY, angle, majorAxis, minorAxis, time);
+    finger2.update(posX, posY2, velX, velY, angle, majorAxis, minorAxis, time);
 }
 
 
