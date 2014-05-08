@@ -4,6 +4,9 @@ import netP5.*;
 import ddf.minim.*;
 Minim minim;
 AudioSample[] player = new AudioSample[1];
+AudioSample[] playerDamageSound = new AudioSample[11];
+AudioSample[] playerScoreSound = new AudioSample[11];
+AudioSample[] playerCollisionSound = new AudioSample[3];
 int lastPlayed = -100;
 
 import beads.*;
@@ -93,13 +96,40 @@ void setup() {
   
   minim = new Minim(this); // initialaizing minim object
   player[0] = minim.loadSample("Drum_Loop_Short.mp3", 2048);
-  
+  playerCollisionSound[0] = minim.loadSample("Collision_Sound_Loss.mp3", 2048);
+  playerCollisionSound[1] = minim.loadSample("Collision_Sound_Tie.mp3", 2048);
+  playerCollisionSound[2] = minim.loadSample("Collision_Sound_Win_2.mp3", 2048);
   
   ac = new AudioContext(); // create our AudioContext
   
   for (int i = 0; i < locFinger.length; i++) {
     try {  
-      locFinger[i] = new SamplePlayer(ac, new Sample(sketchPath("") + "data/Charging_Sound.mp3"));
+      if ((i == 0) || (i == 5))
+        locFinger[i] = new SamplePlayer(ac, new Sample(sketchPath("") + "data/Charging_Sound_6.mp3"));
+      else if ((i == 1) || (i == 6))
+        locFinger[i] = new SamplePlayer(ac, new Sample(sketchPath("") + "data/Charging_Sound_Opt_3.mp3"));
+      else if ((i == 2) || (i == 7))
+        locFinger[i] = new SamplePlayer(ac, new Sample(sketchPath("") + "data/Charging_Sound_Opt_4.mp3"));
+      else if ((i == 3) || (i == 8) || (i == 10))
+        locFinger[i] = new SamplePlayer(ac, new Sample(sketchPath("") + "data/Charging_Sound_Opt_5.mp3"));
+      else
+        locFinger[i] = new SamplePlayer(ac, new Sample(sketchPath("") + "data/Charging_Sound_Opt_2_3.mp3"));
+        
+      if ((i == 0) || (i == 3) || (i == 6) || (i == 9)) {
+        playerScoreSound[i] = minim.loadSample("Score_Sound_2.mp3", 2048);
+        playerDamageSound[i] = minim.loadSample("Damage_Sound_2.mp3", 2048);
+      }
+      else if ((i == 1) || (i == 4) || (i == 7) || (i == 10)) {
+        playerScoreSound[i] = minim.loadSample("Score_Sound_Opt_2.mp3", 2048);
+        playerDamageSound[i] = minim.loadSample("Damage_Sound_Opt_2.mp3", 2048);
+      }
+      else {
+        playerScoreSound[i] = minim.loadSample("Score_Sound_Opt_3.mp3", 2048);
+        playerDamageSound[i] = minim.loadSample("Damage_Sound_Opt_3.mp3", 2048);
+      }
+      
+      playerDamageSound[i].setGain(-40.0);
+      playerScoreSound[i].setGain(-40.0);
     }
     catch(Exception e)
     {
@@ -132,7 +162,11 @@ void setup() {
 
   resetGame();
 
-   player[0].setGain(-30.0);
+   //player[0].setGain(-30.0);
+   player[0].setGain(-40.0);
+   playerCollisionSound[0].setGain(-40.0);
+   playerCollisionSound[1].setGain(-40.0);
+   playerCollisionSound[2].setGain(-40.0);
   
  // player[0].loop();
 }
@@ -279,6 +313,21 @@ void draw() {
   for (Map.Entry me : candidateFingerMapLoc.entrySet())
   {
     Finger finger = (Finger)me.getValue();
+    
+    if (curTime - finger.milliFirstTouched > timeToFire)
+        {
+          int fingerId = - 1;
+          Finger fingerF;
+
+          do {
+            fingerId++;
+            fingerF = (Finger)firedFingerMapLoc.get(fingerId);
+          }
+          while (fingerF != null);
+
+        gainValue[finger.id].setValue(0.0);
+        locFinger[finger.id].reset();
+      }
 
     if (AutoFireMode) {
       // if we haven't heard from this finger in a while,
@@ -336,11 +385,16 @@ void draw() {
             println("LAREA: " + finger.getArea());
           }
         }
+        else {
+          gainValue[finger.id].setValue(0.0);
+          locFinger[finger.id].reset();
+        }  
+        
         
         //locFinger[finger.id].setPosition(000);
         //locFinger[finger.id].stop();
-        gainValue[finger.id].setValue(0.0);
-        locFinger[finger.id].reset();
+        //gainValue[finger.id].setValue(0.0);
+        //locFinger[finger.id].reset();
         
         fingersToRemoveLoc.add(finger.id);
       }
@@ -474,6 +528,7 @@ void draw() {
         //println("health line: " + playerHealthHeightOpp);
         playerHealthOpp -= finger1.getArea() * DamageOfBlob;
         fingersToRemoveLoc.add(finger1.idFired);
+        playerScoreSound[finger1.id].trigger();
       }
       else 
         finger1.switchYDirection();
@@ -542,6 +597,7 @@ void draw() {
 
     if ((finger1.getAbsY() + 8 + sin(radians(finger1.angle)) * finger1.getMinorAxis()) > height - playerHealthHeightLoc) {
       playerHealthLoc -= finger1.getArea() * DamageOfBlob;
+      playerDamageSound[finger1.id].trigger();
       fingersToRemoveOpp.add(finger1.idFired);
     }
     else if ((finger1.getAbsY() - finger1.getMinorAxis()) < playerHealthHeightOpp) {
@@ -560,14 +616,17 @@ void draw() {
             if (finger1.getArea() == finger2.getArea()) {
               fingersToRemoveOpp.add(finger1.idFired);
               fingersToRemoveLoc.add(finger2.idFired);
+              playerCollisionSound[1].trigger();
             }
             else if (finger1.getArea() > finger2.getArea()) {
               fingersToRemoveLoc.add(finger2.idFired);
               finger1.shrinkArea(finger2.minorAxis, finger2.majorAxis);
+              playerCollisionSound[0].trigger();
             }
             else {
               fingersToRemoveOpp.add(finger1.idFired);
               finger2.shrinkArea(finger1.minorAxis, finger1.majorAxis);
+              playerCollisionSound[2].trigger();
             }
           }
         }
@@ -609,14 +668,17 @@ void draw() {
             if (finger1.getArea() == finger2.getArea()) {
               fingersToRemoveLoc.add(finger1.idFired);
               fingersToRemoveLoc.add(finger2.idFired);
+              playerCollisionSound[1].trigger();
             }
             else if (finger1.getArea() > finger2.getArea()) {
               fingersToRemoveLoc.add(finger2.idFired);
               finger1.shrinkArea(finger2.minorAxis, finger2.majorAxis);
+              playerCollisionSound[0].trigger();
             }
             else {
               fingersToRemoveLoc.add(finger1.idFired);
               finger2.shrinkArea(finger1.minorAxis, finger1.majorAxis);
+              playerCollisionSound[0].trigger();
             }
           }
         }
@@ -791,7 +853,7 @@ void oscEvent(OscMessage oscMsg) {
     if (playerId == 0) {
       fingersToAddLoc.add(finger);
       //locFinger[fingerId].trigger();
-      gainValue[fingerId].setValue(1.0);
+      gainValue[fingerId].setValue(0.015); // (0.03); //(0.05);
       locFinger[fingerId].setPosition(000);
       locFinger[fingerId].start();
     }
@@ -807,8 +869,13 @@ void oscEvent(OscMessage oscMsg) {
   int curTime = millis();
   float percFired = map((curTime - finger.milliFirstTouched), 0, 900, 0, 99);
   
+  println(5000.0 - finger.getArea());
+  
   finger.update(posX, posY, velX, velY, angle, majorAxis, minorAxis, time, percFired);
-  frequencyGlide[fingerId].setValue(map(finger.getArea(), 0.0, 1.0, 0.0001, 0.001));
+  frequencyGlide[fingerId].setValue(map((6500.0 - finger.getArea()), 0.0, 6500.0, 0.5, 2.3));
+  // frequencyGlide[fingerId].setValue(map((5000.0 - finger.getArea()), 0.0, 5000.0, 0.5, 2.3));
+  //~~ frequencyGlide[fingerId].setValue(map((3000.0 - finger.getArea()), 1200.0, 3000.0, 0.0001, 0.001));
+  //~~ frequencyGlide[fingerId].setValue(map((0.1/min(.00001, finger.getArea())), 0.0, 1.0, 0.0001, 0.001)*0.1);
   
   if (MirrorMode) 
     finger2.update(posX, posY2, velX, velY, angle, majorAxis, minorAxis, time, percFired);
