@@ -933,8 +933,8 @@ void oscEvent(OscMessage oscMsg) {
       posY = 95.0/height;
   }
   else {
-    if (height - (posY * height) < height * .45)
-      posY = 0.55;
+    if (height - (posY * height) < height * .55)
+      posY = 0.45;
 
     if (height - (posY * height) > height - 95.0)
       posY = 95.0/height;
