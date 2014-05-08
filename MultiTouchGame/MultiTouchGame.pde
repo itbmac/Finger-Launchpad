@@ -8,6 +8,7 @@ AudioSample[] playerDamageSound = new AudioSample[11];
 AudioSample[] playerScoreSound = new AudioSample[11];
 AudioSample[] playerCollisionSound = new AudioSample[3];
 int lastPlayed = -100;
+float minimGain = -20.0; //-40.0;
 
 import beads.*;
 AudioContext ac;
@@ -17,6 +18,7 @@ SamplePlayer[] locFinger = new SamplePlayer[11];
 Gain[] sampleGain = new Gain[11];
 Glide[] gainValue = new Glide[11];
 Glide[] frequencyGlide = new Glide[11];
+float beadsGain = 0.3; // 0.015;
 
 // the object we will be using to handle OSC communication.
 OscP5 oscP5;
@@ -56,7 +58,7 @@ public boolean AutoFireMode = false;
 public boolean StrokeMode = false;
 public boolean GrowToFireMode = true;
 public boolean ColorMultiplyMode = false;
-public boolean MirrorMode = true;
+public boolean MirrorMode = false;
 public float MirrorModeOffsetX = 0.25;
 public float MirrorModeOffsetY = 0.1;
 public boolean DebugMode = false;
@@ -128,8 +130,8 @@ void setup() {
         playerDamageSound[i] = minim.loadSample("Damage_Sound_Opt_3.mp3", 2048);
       }
       
-      playerDamageSound[i].setGain(-40.0);
-      playerScoreSound[i].setGain(-40.0);
+      playerDamageSound[i].setGain(minimGain);
+      playerScoreSound[i].setGain(minimGain);
     }
     catch(Exception e)
     {
@@ -163,10 +165,10 @@ void setup() {
   resetGame();
 
    //player[0].setGain(-30.0);
-   player[0].setGain(-40.0);
-   playerCollisionSound[0].setGain(-40.0);
-   playerCollisionSound[1].setGain(-40.0);
-   playerCollisionSound[2].setGain(-40.0);
+   player[0].setGain(minimGain);
+   playerCollisionSound[0].setGain(minimGain);
+   playerCollisionSound[1].setGain(minimGain);
+   playerCollisionSound[2].setGain(minimGain);
   
  // player[0].loop();
 }
@@ -853,7 +855,7 @@ void oscEvent(OscMessage oscMsg) {
     if (playerId == 0) {
       fingersToAddLoc.add(finger);
       //locFinger[fingerId].trigger();
-      gainValue[fingerId].setValue(0.015); // (0.03); //(0.05);
+      gainValue[fingerId].setValue(beadsGain); // (0.03); //(0.05);
       locFinger[fingerId].setPosition(000);
       locFinger[fingerId].start();
     }
