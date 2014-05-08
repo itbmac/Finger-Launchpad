@@ -14,6 +14,7 @@ class Finger
   public float minorAxisLastTouched;
   public int milliLastTouched;
   public int milliFirstTouched;
+  public float firstContactArea;
 
   int maxOpacity = 100;
   int wallDelayMax = 30;
@@ -205,6 +206,10 @@ class Finger
 
   public float getArea() {
     return PI * this.getMajorAxis() * this.getMinorAxis();
+  }
+  
+  public void setFirstContactArea() {
+    this.firstContactArea = this.getArea();
   }
 
   public void shrinkArea(float oMinorAxis, float oMajorAxis) {

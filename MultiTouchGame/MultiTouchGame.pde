@@ -45,16 +45,30 @@ public color colorOpp = #7d70cf;
 public color colorOppMul = #e8e780;
 public color colorBac = #1d1d1d;
 public color colorAcc = #131311;
+public color colorDiv = #565656;
 public int opacityBac = 70;
 public int opacityMul = 65;
 public int healthBarYOffset = 4;
 public int strokeFired = 4;
 public int strokeLoading = 2;
+public int dividerHeight = 20;
+/* 
+ * Level 0 - One Gap, 400px wide
+ * Level 1 - One Gap, 200px wide
+ * Level 2 - Two Gap, 200px wide each
+ * Level 3 - Three Gap, 100px wide each
+ */
+public float[][] dividerPos = {{120.0, 520.0}, {220.0, 420.0}, {60.0, 260.0, 380.0, 580.0}, {56.6666, 156.6666, 270.0, 370.0, 483.3333, 583.3333}}; 
+public int dividerLevel = 0;
+public int dividerLastSwitch = - 100;
+public int dividerLevelLength = 30 * 1000; // 30 seconds
 
 public boolean NoDamageMode = false;
 public boolean FriendlyFireMode = false;
 public boolean MovementMode = false;
 public boolean AutoFireMode = false;
+public boolean DividerMode = true;
+//public boolean ChargeToFireMode = false;
 public boolean StrokeMode = false;
 public boolean GrowToFireMode = true;
 public boolean ColorMultiplyMode = false;
@@ -83,6 +97,9 @@ int timeToFire = 900;
 float innerPolygonCoef[];
 float outerPolygonCoef[];
 int maxIterations;
+
+int playerChargeMax = 100;
+int playerChargeLoc = 100, playerChargeOpp = 100;
 
 int playerHealthMax = 100;
 int playerHealthLoc = 100, playerHealthOpp = 100;
@@ -192,6 +209,9 @@ void resetGame() {
 
   playerHealthLoc = playerHealthMax;
   playerHealthOpp = playerHealthMax;
+  
+  playerChargeLoc = playerChargeMax;
+  playerChargeOpp = playerChargeMax;
 }
 
 
@@ -200,6 +220,13 @@ void draw() {
     player[0].trigger();
     lastPlayed = millis();
   }
+  
+  if(dividerLevelLength + dividerLastSwitch <= millis()) {
+    dividerLevel = (dividerLevel + 1) % dividerPos.length;
+    dividerLastSwitch = millis();
+  }
+  
+  println(dividerLevel);
   
   if (playerHealthLoc <= 0) {
     playerScoreOpp++;
@@ -237,7 +264,34 @@ void draw() {
   stroke(colorAcc, opacityBac);
   fill(colorAcc, opacityBac);
   strokeWeight(4);
-  line(0.0, height/2, width, height/2);
+  
+  if (!DividerMode)
+    line(0.0, height/2, width, height/2);
+  
+  strokeCap(SQUARE);
+  stroke(colorDiv, opacityBac);
+  fill(colorDiv, opacityBac);
+  strokeWeight(dividerHeight/2);
+  
+  if (DividerMode) {
+    if ((dividerLevel == 0) || (dividerLevel == 1)) {
+      line(0.0, height/2, dividerPos[dividerLevel][0], height/2);
+      line(dividerPos[dividerLevel][1], height/2, width, height/2);
+    }
+    
+    else if (dividerLevel == 2) {
+      line(0.0, height/2, dividerPos[dividerLevel][0], height/2);
+      line(dividerPos[dividerLevel][1], height/2, dividerPos[dividerLevel][2], height/2);
+      line(dividerPos[dividerLevel][3], height/2, width, height/2);
+    }
+    
+    else if (dividerLevel == 3) {
+      line(0.0, height/2, dividerPos[dividerLevel][0], height/2);
+      line(dividerPos[dividerLevel][1], height/2, dividerPos[dividerLevel][2], height/2);
+      line(dividerPos[dividerLevel][3], height/2, dividerPos[dividerLevel][4], height/2);
+      line(dividerPos[dividerLevel][5], height/2, width, height/2);
+    }
+  }
 
   stroke(colorOpp); // (109, 148, 167);
   fill(colorOpp);
@@ -538,6 +592,58 @@ void draw() {
     else if ((finger1.getAbsY() - finger1.getMinorAxis()) > height - playerHealthHeightLoc) {
       finger1.switchYDirection();
     }
+    
+    if (DividerMode) {
+      int collided = 1;
+      
+      if ((dividerLevel == 0) || (dividerLevel == 1)) {
+        if (((finger1.getAbsY() + 8 - sin(radians(finger1.angle)) * finger1.getMajorAxis()) >= height/2 - dividerHeight/2) && ((finger1.getAbsY() - sin(radians(finger1.angle)) * finger1.getMajorAxis()) <= height/2)) {
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) >= 0.0) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) <= dividerPos[dividerLevel][0]))
+            fingersToRemoveLoc.add(finger1.idFired);
+          else if (((finger1.getAbsX() - finger1.getMajorAxis()) <= width) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][1]))
+            fingersToRemoveLoc.add(finger1.idFired);
+          else
+            collided = 0;
+            
+          if (collided == 1)
+            playerCollisionSound[0].trigger();
+        }
+      }
+      
+      else if (dividerLevel == 2) {
+        if (((finger1.getAbsY() + 8 - sin(radians(finger1.angle)) * finger1.getMajorAxis()) >= height/2 - dividerHeight/2) && ((finger1.getAbsY() - sin(radians(finger1.angle)) * finger1.getMajorAxis()) <= height/2)) {
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) >= 0.0) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) <= dividerPos[dividerLevel][0]))
+            fingersToRemoveLoc.add(finger1.idFired);
+          else if (((finger1.getAbsX() - finger1.getMajorAxis()) <= dividerPos[dividerLevel][2]) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][1]))
+            fingersToRemoveLoc.add(finger1.idFired);
+          else if (((finger1.getAbsX() - finger1.getMajorAxis()) <= width) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][3]))
+            fingersToRemoveLoc.add(finger1.idFired);
+          else
+            collided = 0;
+            
+          if (collided == 1)
+            playerCollisionSound[0].trigger();
+        }
+      }
+      
+      else if (dividerLevel == 3) {
+        if (((finger1.getAbsY() + 8 - sin(radians(finger1.angle)) * finger1.getMajorAxis()) >= height/2 - dividerHeight/2) && ((finger1.getAbsY() - sin(radians(finger1.angle)) * finger1.getMajorAxis()) <= height/2)) {
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) >= 0.0) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) <= dividerPos[dividerLevel][0]))
+            fingersToRemoveLoc.add(finger1.idFired);
+          else if (((finger1.getAbsX() - finger1.getMajorAxis()) <= dividerPos[dividerLevel][2]) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][1]))
+            fingersToRemoveLoc.add(finger1.idFired);
+          else if (((finger1.getAbsX() - finger1.getMajorAxis()) <= dividerPos[dividerLevel][4]) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][3]))
+            fingersToRemoveLoc.add(finger1.idFired);
+          else if (((finger1.getAbsX() - finger1.getMajorAxis()) <= width) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][5]))
+            fingersToRemoveLoc.add(finger1.idFired);
+          else
+            collided = 0;
+            
+          if (collided == 1)
+            playerCollisionSound[0].trigger();
+        }
+      }
+    }
 
     if (!NoDamageMode) {
       for (Map.Entry me2 : firedFingerMapNew.entrySet())
@@ -604,6 +710,41 @@ void draw() {
     }
     else if ((finger1.getAbsY() - finger1.getMinorAxis()) < playerHealthHeightOpp) {
       finger1.switchYDirection();
+    }
+    
+    if (DividerMode) {
+      if ((dividerLevel == 0) || (dividerLevel == 1)) {
+        if (((finger1.getAbsY() - 8 + sin(radians(finger1.angle)) * finger1.getMajorAxis()) >= height/2 - dividerHeight) && ((finger1.getAbsY() + sin(radians(finger1.angle)) * finger1.getMajorAxis()) <= height/2)) {
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) >= 0.0) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) <= dividerPos[dividerLevel][0]))
+            fingersToRemoveOpp.add(finger1.idFired);
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) <= width) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][1]))
+            fingersToRemoveOpp.add(finger1.idFired);
+        }
+      }
+      
+      else if (dividerLevel == 2) {
+        if (((finger1.getAbsY() - 8 + sin(radians(finger1.angle)) * finger1.getMajorAxis()) >= height/2 - dividerHeight) && ((finger1.getAbsY() + sin(radians(finger1.angle)) * finger1.getMajorAxis()) <= height/2)) {
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) >= 0.0) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) <= dividerPos[dividerLevel][0]))
+            fingersToRemoveOpp.add(finger1.idFired);
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) <= dividerPos[dividerLevel][2]) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][1]))
+            fingersToRemoveOpp.add(finger1.idFired);
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) <= width) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][3]))
+            fingersToRemoveOpp.add(finger1.idFired);
+        }
+      }
+      
+      else if (dividerLevel == 3) {
+        if (((finger1.getAbsY() - 8 + sin(radians(finger1.angle)) * finger1.getMajorAxis()) >= height/2 - dividerHeight) && ((finger1.getAbsY() + sin(radians(finger1.angle)) * finger1.getMajorAxis()) <= height/2)) {
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) >= 0.0) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) <= dividerPos[dividerLevel][0]))
+            fingersToRemoveOpp.add(finger1.idFired);
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) <= dividerPos[dividerLevel][2]) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][1]))
+            fingersToRemoveOpp.add(finger1.idFired);
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) <= dividerPos[dividerLevel][4]) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][3]))
+            fingersToRemoveOpp.add(finger1.idFired);
+          if (((finger1.getAbsX() - finger1.getMajorAxis()) <= width) && ((finger1.getAbsX() + cos(radians(-finger1.angle)) * finger1.getMajorAxis()) >= dividerPos[dividerLevel][5]))
+            fingersToRemoveOpp.add(finger1.idFired);
+        }
+      }
     }
 
     if (!NoDamageMode) {
@@ -785,15 +926,15 @@ void oscEvent(OscMessage oscMsg) {
     playerId = 1;
 
   if (playerId == 0) {
-    if (height - (posY * height) < height/2)
-      posY = 0.5;
+    if (height - (posY * height) < height * .55)
+      posY = 0.45;
 
     if (height - (posY * height) > height - 95.0)
       posY = 95.0/height;
   }
   else {
-    if (height - (posY * height) < height/2)
-      posY = 0.5;
+    if (height - (posY * height) < height * .45)
+      posY = 0.55;
 
     if (height - (posY * height) > height - 95.0)
       posY = 95.0/height;
@@ -802,8 +943,8 @@ void oscEvent(OscMessage oscMsg) {
   }
 
   if (MirrorMode) {
-    if (height - (posY2 * height) < height/2)
-      posY2 = 0.5;
+    if (height - (posY2 * height) < height * .45)
+      posY2 = 0.55;
 
     if (height - (posY2 * height) > height - 95.0)
       posY2 = 95.0/height;
@@ -847,10 +988,11 @@ void oscEvent(OscMessage oscMsg) {
     finger2  = (Finger)candidateFingerMapOpp.get(fingerId);
   }
 
-
+  boolean firstContact = false;
   // finger doesn't exist yet, so create it
   if (finger == null)
   {
+    firstContact = true;
     finger = new Finger(fingerId, time, playerId);
     if (playerId == 0) {
       fingersToAddLoc.add(finger);
@@ -871,9 +1013,14 @@ void oscEvent(OscMessage oscMsg) {
   int curTime = millis();
   float percFired = map((curTime - finger.milliFirstTouched), 0, 900, 0, 99);
   
-  println(5000.0 - finger.getArea());
+  if (DebugMode)
+    println(5000.0 - finger.getArea());
   
   finger.update(posX, posY, velX, velY, angle, majorAxis, minorAxis, time, percFired);
+  
+  if (firstContact)
+    finger.setFirstContactArea();
+  
   frequencyGlide[fingerId].setValue(map((6500.0 - finger.getArea()), 0.0, 6500.0, 0.5, 2.3));
   // frequencyGlide[fingerId].setValue(map((5000.0 - finger.getArea()), 0.0, 5000.0, 0.5, 2.3));
   //~~ frequencyGlide[fingerId].setValue(map((3000.0 - finger.getArea()), 1200.0, 3000.0, 0.0001, 0.001));
