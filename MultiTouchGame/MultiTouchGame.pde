@@ -4,8 +4,16 @@ import netP5.*;
 import ddf.minim.*;
 Minim minim;
 AudioSample[] player = new AudioSample[1];
-AudioSample[] locFinger = new AudioSample[11];
 int lastPlayed = -100;
+
+import beads.*;
+AudioContext ac;
+SamplePlayer[] locFinger = new SamplePlayer[11];
+
+// we can run both SamplePlayers through the same Gain
+Gain[] sampleGain = new Gain[11];
+Glide[] gainValue = new Glide[11];
+Glide[] frequencyGlide = new Glide[11];
 
 // the object we will be using to handle OSC communication.
 OscP5 oscP5;
@@ -85,10 +93,39 @@ void setup() {
   
   minim = new Minim(this); // initialaizing minim object
   player[0] = minim.loadSample("Drum_Loop_Short.mp3", 2048);
+  
+  
+  ac = new AudioContext(); // create our AudioContext
+  
   for (int i = 0; i < locFinger.length; i++) {
-    locFinger[i] = minim.loadSample("Charging_Sound.mp3", 2048);
-    locFinger[i].setGain(-40.0);
+    try {  
+      locFinger[i] = new SamplePlayer(ac, new Sample(sketchPath("") + "data/Charging_Sound.mp3"));
+    }
+    catch(Exception e)
+    {
+      // if there is an error, show an error message (at the bottom of the processing window)
+      println("Exception while attempting to load sample!");
+      e.printStackTrace(); // then print a technical description of the error
+    }
+    
+    // note that we want to play the sample multiple times
+    locFinger[i].setKillOnEnd(false);
+    
+    frequencyGlide[i] = new Glide(ac, 1);
+    frequencyGlide[i].setGlideTime(20);
+    
+    locFinger[i].setPitch(frequencyGlide[i]);
+    
+    gainValue[i] = new Glide(ac, 0.0, 30);
+    sampleGain[i] = new Gain(ac, 1, gainValue[i]);
+    sampleGain[i].addInput(locFinger[i]);
+    ac.out.addInput(sampleGain[i]);
+    
+   // locFinger[i] = minim.loadSample("Charging_Sound.mp3", 2048);
+   // locFinger[i].setGain(-40.0);
   }
+  
+  ac.start(); // begin audio processing
 
   // create a new instance of oscP5 to listen to incoming osc messages
   oscP5 = new OscP5(this, listenPort);
@@ -300,7 +337,10 @@ void draw() {
           }
         }
         
-        locFinger[finger.id].stop();
+        //locFinger[finger.id].setPosition(000);
+        //locFinger[finger.id].stop();
+        gainValue[finger.id].setValue(0.0);
+        locFinger[finger.id].reset();
         
         fingersToRemoveLoc.add(finger.id);
       }
@@ -750,7 +790,10 @@ void oscEvent(OscMessage oscMsg) {
     finger = new Finger(fingerId, time, playerId);
     if (playerId == 0) {
       fingersToAddLoc.add(finger);
-      locFinger[fingerId].trigger();
+      //locFinger[fingerId].trigger();
+      gainValue[fingerId].setValue(1.0);
+      locFinger[fingerId].setPosition(000);
+      locFinger[fingerId].start();
     }
     else if (playerId == 1)
       fingersToAddOpp.add(finger);
@@ -764,8 +807,9 @@ void oscEvent(OscMessage oscMsg) {
   int curTime = millis();
   float percFired = map((curTime - finger.milliFirstTouched), 0, 900, 0, 99);
   
-  locFinger[fingerId].setGain(-40.0);
   finger.update(posX, posY, velX, velY, angle, majorAxis, minorAxis, time, percFired);
+  frequencyGlide[fingerId].setValue(map(finger.getArea(), 0.0, 1.0, 0.0001, 0.001));
+  
   if (MirrorMode) 
     finger2.update(posX, posY2, velX, velY, angle, majorAxis, minorAxis, time, percFired);
 }
