@@ -50,14 +50,16 @@ class Finger
   }
 
   public void update(float posX, float posY, float velX, float velY, 
-  float angle, float majorAxis, float minorAxis, int time)
+  float angle, float majorAxis, float minorAxis, int time, float percToFire)
   {
     this.majorAxisLastTouched = this.majorAxis;
     this.minorAxisLastTouched = this.minorAxis;
     this.pos.x = posX;
     this.pos.y = posY;
+    if (percToFire < 99) {
     this.vel.x = velX;
     this.vel.y = velY;
+    }
     this.angle = angle;
     this.majorAxis = majorAxis;
     this.minorAxis = minorAxis;
@@ -82,6 +84,15 @@ class Finger
   {
     float speed = .01;
     speed = majorAxis/minorAxis * SpeedOfBlob; // The more elongated, the faster the speed
+    
+    float velX = constrain(abs(map(this.vel.x, 0.0, .10, 0.05 * speed, 3.0 * speed)), 0.05 * speed, 3.0 * speed);
+    float velY = constrain(abs(map(this.vel.y, 0.0, .10, 0.05 * speed, 3.0 * speed)), 0.05 * speed, 3.0 * speed);
+    
+    if (!MovementMode) {
+      velX = speed;
+      velY = speed;
+    }
+    
     if (wallDelay > 0)
       wallDelay--;
 
@@ -89,17 +100,25 @@ class Finger
       println(speed);
 
     if (playerId == 0) {
-      this.pos.x += 1 * speed * cos(radians(-angle));
-      this.pos.y -= 1 * speed * sin(radians(-angle));
+      this.pos.x += velX * cos(radians(-angle));
+      this.pos.y -= velY * sin(radians(-angle));
     }
     else if (playerId == 1) {
-      this.pos.x += 1 * speed * cos(radians(angle));
-      this.pos.y -= 1 * speed * sin(radians(angle));
+      this.pos.x += velX * cos(radians(angle));
+      this.pos.y -= velY * sin(radians(angle));
     }
   }
 
   public void render(float width, float height, float percToFire)
   {
+    float majorAxisAdj = map((percToFire/100), 0, .99, .65, 1.0) * majorAxis;
+    float minorAxisAdj = map((percToFire/100), 0, .99, .65, 1.0) * minorAxis;
+    
+    if (!GrowToFireMode) {
+      majorAxisAdj = majorAxis;
+      minorAxisAdj = minorAxis;
+    }
+    
     float absX = pos.x * width;
     float absY = height - (pos.y * height);
     float opac = map(percToFire, 0, 100, 0, maxOpacity);
@@ -144,7 +163,7 @@ class Finger
     else 
       strokeWeight(strokeFired);
 
-    ellipse(0.0, 0.0, majorAxis * fingerScale * width, minorAxis * fingerScale * width);
+    ellipse(0.0, 0.0, majorAxisAdj * fingerScale * width, minorAxisAdj * fingerScale * width);
 
     if ((!StrokeMode) && (percToFire >= 99)) {
       stroke(colorBac);
@@ -152,10 +171,11 @@ class Finger
     }
 
     if (percToFire < 100) {
-      float arrowDist = majorAxis * fingerScale * width * 0.4;
-      line(0.0, 0.0, arrowDist - arrowDistScale, 0.0);
-      line(arrowDist - arrowDistScale, 0.0, 0.75 * arrowDist - arrowDistScale, 0.35 * arrowDist);
-      line(arrowDist - arrowDistScale, 0.0, 0.75 * arrowDist - arrowDistScale, -0.35 * arrowDist);
+      float arrowDist = majorAxisAdj * fingerScale * width * 0.4;
+      float arrowDistN = minorAxisAdj * fingerScale * width * 0.4;
+      line(-0.5 * arrowDistScale, 0.0, arrowDist - arrowDistScale, 0.0);
+      line(arrowDist - arrowDistScale, 0.0, 0.75 * arrowDistN - arrowDistScale, 0.75 * arrowDistN);
+      line(arrowDist - arrowDistScale, 0.0, 0.75 * arrowDistN - arrowDistScale, -0.75 * arrowDistN);
       point(0.0, 0.0);
     }
 

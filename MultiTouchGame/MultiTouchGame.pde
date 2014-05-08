@@ -1,6 +1,11 @@
 import java.util.Map;
 import oscP5.*;
 import netP5.*;
+import ddf.minim.*;
+Minim minim;
+AudioSample[] player = new AudioSample[1];
+AudioSample[] locFinger = new AudioSample[11];
+int lastPlayed = -100;
 
 // the object we will be using to handle OSC communication.
 OscP5 oscP5;
@@ -35,8 +40,10 @@ public int strokeLoading = 2;
 
 public boolean NoDamageMode = false;
 public boolean FriendlyFireMode = false;
+public boolean MovementMode = false;
 public boolean AutoFireMode = false;
 public boolean StrokeMode = false;
+public boolean GrowToFireMode = true;
 public boolean ColorMultiplyMode = false;
 public boolean MirrorMode = true;
 public float MirrorModeOffsetX = 0.25;
@@ -47,7 +54,8 @@ public int GameOverWinner;
 public int GameOverLength = 5;
 public int GameOverTimer;
 
-public float SpeedOfBlob = 0.004; //0.0065;
+public float SpeedOfBlob = 0.004; //0.004; //0.0065;
+public float DamageOfBlob = 0.001; //0.003;
 
 // the port that we will be listening for osc signals over
 int listenPort = 9109;
@@ -74,11 +82,22 @@ void setup() {
   frameRate(30);
   strokeWeight(2.0);
   noCursor();
+  
+  minim = new Minim(this); // initialaizing minim object
+  player[0] = minim.loadSample("Drum_Loop_Short.mp3", 2048);
+  for (int i = 0; i < locFinger.length; i++) {
+    locFinger[i] = minim.loadSample("Charging_Sound.mp3", 2048);
+    locFinger[i].setGain(-40.0);
+  }
 
   // create a new instance of oscP5 to listen to incoming osc messages
   oscP5 = new OscP5(this, listenPort);
 
   resetGame();
+
+   player[0].setGain(-30.0);
+  
+ // player[0].loop();
 }
 
 void resetGame() {
@@ -104,7 +123,11 @@ void resetGame() {
 
 
 void draw() {
-
+  if(player[0].length() + lastPlayed - 120 <= millis()) {
+    player[0].trigger();
+    lastPlayed = millis();
+  }
+  
   if (playerHealthLoc <= 0) {
     playerScoreOpp++;
     resetGame();
@@ -268,12 +291,17 @@ void draw() {
           finger.idFired = fingerId;
           fingersToFireLoc.add(fingerId);
           firedFingerMapLoc.put(fingerId, finger);
+          
+          //player[2].trigger();
 
           if (DebugMode) {
             println("LFIRE: " + fingerId);
             println("LAREA: " + finger.getArea());
           }
         }
+        
+        locFinger[finger.id].stop();
+        
         fingersToRemoveLoc.add(finger.id);
       }
     }
@@ -404,7 +432,7 @@ void draw() {
       if (finger1.playerId == 0) {
         //println("abs y: " + finger1.getAbsY() + " ;;; calc y: " + (finger1.getAbsY() - 8 - sin(radians(finger1.angle)) * finger1.getMinorAxis()));
         //println("health line: " + playerHealthHeightOpp);
-        playerHealthOpp -= finger1.getArea() * 0.003;
+        playerHealthOpp -= finger1.getArea() * DamageOfBlob;
         fingersToRemoveLoc.add(finger1.idFired);
       }
       else 
@@ -473,7 +501,7 @@ void draw() {
 
 
     if ((finger1.getAbsY() + 8 + sin(radians(finger1.angle)) * finger1.getMinorAxis()) > height - playerHealthHeightLoc) {
-      playerHealthLoc -= finger1.getArea() * 0.003;
+      playerHealthLoc -= finger1.getArea() * DamageOfBlob;
       fingersToRemoveOpp.add(finger1.idFired);
     }
     else if ((finger1.getAbsY() - finger1.getMinorAxis()) < playerHealthHeightOpp) {
@@ -488,7 +516,7 @@ void draw() {
         if (finger1 != finger2) {
           // draw an arrow for its direction
           if (collide(finger1.getAbsX(), finger1.getAbsY(), finger1.getMajorAxis() + (strokeFired * 2), finger1.getMinorAxis() + (strokeFired * 2), 
-          finger2.getAbsX(), finger2.getAbsY(), finger2.getMajorAxis() + (strokeFired * 2), finger2.getMinorAxis() + (strokeFired * 2))) {
+          finger2.getAbsX(), finger2.getAbsY(), finger2.getMajorAxis() + (strokeFired * 0), finger2.getMinorAxis() + (strokeFired * 0))) {
             if (finger1.getArea() == finger2.getArea()) {
               fingersToRemoveOpp.add(finger1.idFired);
               fingersToRemoveLoc.add(finger2.idFired);
@@ -700,7 +728,7 @@ void oscEvent(OscMessage oscMsg) {
     state = oscMsg.get(9).intValue();
     size = oscMsg.get(10).floatValue();
   }
-
+  
   if (DebugMode)
     println("CirclePerc: " + majorAxis/minorAxis);
 
@@ -720,8 +748,10 @@ void oscEvent(OscMessage oscMsg) {
   if (finger == null)
   {
     finger = new Finger(fingerId, time, playerId);
-    if (playerId == 0)
+    if (playerId == 0) {
       fingersToAddLoc.add(finger);
+      locFinger[fingerId].trigger();
+    }
     else if (playerId == 1)
       fingersToAddOpp.add(finger);
 
@@ -730,9 +760,14 @@ void oscEvent(OscMessage oscMsg) {
       fingersToAddOpp.add(finger2);
     }
   }
-  finger.update(posX, posY, velX, velY, angle, majorAxis, minorAxis, time);
+  
+  int curTime = millis();
+  float percFired = map((curTime - finger.milliFirstTouched), 0, 900, 0, 99);
+  
+  locFinger[fingerId].setGain(-40.0);
+  finger.update(posX, posY, velX, velY, angle, majorAxis, minorAxis, time, percFired);
   if (MirrorMode) 
-    finger2.update(posX, posY2, velX, velY, angle, majorAxis, minorAxis, time);
+    finger2.update(posX, posY2, velX, velY, angle, majorAxis, minorAxis, time, percFired);
 }
 
 
