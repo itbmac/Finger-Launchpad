@@ -15,7 +15,9 @@ Play with 2 players:
 3) Launch "SendMultiTouches" & "SendMultiTouches Copy".
 4) Do not do anything with SendMultiTouches.
 5) Adjust "SendMultiTouches Copy" to have your opponents IP Address (don't change port #).
-   You each do this. This isn't a client/server game. It it two simutatenous running games each recieving the same OSC messages from you and your oppenents MacBooks.
+    - You each do this. 
+    - This isn't a client/server game. 
+    - It it two simutatenous running games each recieving the same OSC messages from you and your oppenents MacBooks.
 6) Launch the game at the same time.
 7) Enjoy the Battle.
 
@@ -35,4 +37,4 @@ Play with 1 player:
 ===============================================
 Thank you to:
 Golan Levin
-SendMultiTouches Tool: Duncan Boehle
+Duncan Boehle (http://notranslation.com/multi-touch-tool-for-trackpads/)
