@@ -1,11 +1,13 @@
-Finger Launchpad
+Finger-Launchpad
 ===============================================
-Programming, Art, Design: MacKenzie Bates
-Music: Theo Teris
-SendMultiTouches Tool: Duncan Boehle
+Programming, Art, Design: MacKenzie Bates.
+Music: Theo Teris.
+Multi Touch Tool: Duncan Boehle.
+===============================================
 ===============================================
 
------------------------------------------------
+How to Play.
+===============================================
 Play with 2 players:
 
 1) Each have a MacBook.
@@ -17,7 +19,7 @@ Play with 2 players:
 6) Launch the game at the same time.
 7) Enjoy the Battle.
 
------------------------------------------------
+===============================================
 Play with 1 player:
 
 1) Have a MacBook.
@@ -26,3 +28,11 @@ Play with 1 player:
 4) In the code, find the boolean "MirrorMode" set it to true.
 5) Launch the game.
 6) Enjoy Battling Yourself!
+
+
+
+
+===============================================
+Thank you to:
+Golan Levin
+SendMultiTouches Tool: Duncan Boehle
