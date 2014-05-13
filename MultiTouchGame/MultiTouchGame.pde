@@ -216,6 +216,8 @@ void resetGame() {
 
 
 void draw() {
+  noCursor();
+  
   if(player[0].length() + lastPlayed - 120 <= millis()) {
     player[0].trigger();
     lastPlayed = millis();
@@ -292,6 +294,8 @@ void draw() {
       line(dividerPos[dividerLevel][5], height/2, width, height/2);
     }
   }
+  
+  strokeCap(ROUND);
 
   stroke(colorOpp); // (109, 148, 167);
   fill(colorOpp);
